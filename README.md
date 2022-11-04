@@ -1,3 +1,3 @@
 # Jelly Router
 
-Integration of `purescript-jelly` with `purescript-routing`.
+Router of `purescript-jelly`.
