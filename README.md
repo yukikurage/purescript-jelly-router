@@ -1,3 +1,3 @@
 # Jelly Router
 
-Router of `purescript-jelly`.
+Router for [`purescript-jelly`](https://github.com/yukikurage/purescript-jelly).
