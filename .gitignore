@@ -9,3 +9,4 @@
 /.psa*
 /.spago
 /output-es
+/public/index.js
