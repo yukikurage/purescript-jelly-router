@@ -3,13 +3,14 @@ module Jelly.Router where
 import Prelude
 
 import Control.Monad.Reader (ReaderT, asks, runReaderT)
+import Control.Monad.Rec.Class (class MonadRec)
 import Data.Tuple.Nested ((/\))
 import Effect (Effect)
 import Effect.Class (class MonadEffect, liftEffect)
 import Foreign (unsafeToForeign)
 import Jelly.Component (class Component)
 import Jelly.Element (a)
-import Jelly.Hydrate (HydrateM, mount)
+import Jelly.Hydrate (HydrateM, hydrate, mount)
 import Jelly.Prop (Prop, on, (:=))
 import Jelly.Render (RenderM, render)
 import Signal (Signal, newState, writeChannel)
@@ -47,6 +48,7 @@ derive newtype instance Monad m => Applicative (RouterT m)
 derive newtype instance Monad m => Bind (RouterT m)
 derive newtype instance Monad m => Monad (RouterT m)
 derive newtype instance MonadEffect m => MonadEffect (RouterT m)
+derive newtype instance MonadRec m => MonadRec (RouterT m)
 derive newtype instance MonadHooks m => MonadHooks (RouterT m)
 derive newtype instance Component m => Component (RouterT m)
 instance MonadEffect m => Router (RouterT m) where
@@ -54,8 +56,8 @@ instance MonadEffect m => Router (RouterT m) where
   useReplaceRoute route = RouterT $ asks _.replaceState >>= \replace -> liftEffect $ replace route
   useCurrentRoute = RouterT $ asks _.currentRoute
 
-mountRouter :: RouterT HydrateM Unit -> Node -> Hooks Unit
-mountRouter (RouterT m) node = do
+initRouter :: Hooks RouterR
+initRouter = do
   w <- liftEffect window
   initRoute <- liftEffect do
     l <- location w
@@ -81,7 +83,17 @@ mountRouter (RouterT m) node = do
     route <- liftEffect $ href =<< location w
     writeChannel crChn route
 
+  pure $ routerR
+
+mountRouter :: RouterT HydrateM Unit -> Node -> Hooks Unit
+mountRouter (RouterT m) node = do
+  routerR <- initRouter
   mount (runReaderT m routerR) node
+
+hydrateRouter :: RouterT HydrateM Unit -> Node -> Hooks Unit
+hydrateRouter (RouterT m) node = do
+  routerR <- initRouter
+  hydrate (runReaderT m routerR) node
 
 renderRouter :: RouterT RenderM Unit -> String -> Effect String
 renderRouter (RouterT m) route = do
