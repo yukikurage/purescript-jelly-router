@@ -2,7 +2,7 @@ module Jelly.Router where
 
 import Prelude
 
-import Control.Monad.Reader (ReaderT, asks, runReaderT)
+import Control.Monad.Reader (ReaderT, asks, lift, runReaderT)
 import Control.Monad.Rec.Class (class MonadRec)
 import Data.Tuple.Nested ((/\))
 import Effect (Effect)
@@ -55,6 +55,11 @@ instance MonadEffect m => Router (RouterT m) where
   usePushRoute route = RouterT $ asks _.pushState >>= \push -> liftEffect $ push route
   useReplaceRoute route = RouterT $ asks _.replaceState >>= \replace -> liftEffect $ replace route
   useCurrentRoute = RouterT $ asks _.currentRoute
+
+instance Router m => Router (ReaderT r m) where
+  usePushRoute = lift <<< usePushRoute
+  useReplaceRoute = lift <<< useReplaceRoute
+  useCurrentRoute = lift useCurrentRoute
 
 initRouter :: Hooks RouterR
 initRouter = do
