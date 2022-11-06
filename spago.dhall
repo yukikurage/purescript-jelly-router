@@ -18,6 +18,7 @@ to generate this file without the comments in this block.
   , "prelude"
   , "simple-hooks"
   , "simple-signal"
+  , "tailrec"
   , "transformers"
   , "tuples"
   , "web-dom"

@@ -21,7 +21,7 @@ import Web.HTML (window)
 import Web.HTML.Event.EventTypes (click)
 import Web.HTML.Event.PopStateEvent.EventTypes (popstate)
 import Web.HTML.History (DocumentTitle(..), URL(..), pushState, replaceState)
-import Web.HTML.Location (hash, href, pathname, search)
+import Web.HTML.Location (hash, pathname, search)
 import Web.HTML.Window (history, location)
 import Web.HTML.Window as Window
 
@@ -85,7 +85,12 @@ initRouter = do
       }
 
   useEvent (Window.toEventTarget w) popstate \_ -> do
-    route <- liftEffect $ href =<< location w
+    route <- liftEffect do
+      l <- location w
+      pn <- pathname l
+      sr <- search l
+      hs <- hash l
+      pure $ pn <> sr <> hs
     writeChannel crChn route
 
   pure $ routerR
