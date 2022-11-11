@@ -123,12 +123,12 @@ in  upstream
       , "web-html"
       ]
     , repo = "https://github.com/yukikurage/purescript-jelly.git"
-    , version = "development"
+    , version = "v0.8.0"
     }
   with jelly-signal =
     { dependencies = [ "effect", "prelude", "refs", "tuples", "unsafe-coerce" ]
-    , repo = "https://github.com/yukikurage/purescript-simple-signal.git"
-    , version = "master"
+    , repo = "https://github.com/yukikurage/purescript-jelly-signal.git"
+    , version = "v0.1.0"
     }
   with jelly-hooks =
     { dependencies =
@@ -145,6 +145,6 @@ in  upstream
       , "unsafe-coerce"
       , "web-events"
       ]
-    , repo = "https://github.com/yukikurage/purescript-simple-hooks.git"
-    , version = "master"
+    , repo = "https://github.com/yukikurage/purescript-jelly-hooks.git"
+    , version = "v0.1.0"
     }
