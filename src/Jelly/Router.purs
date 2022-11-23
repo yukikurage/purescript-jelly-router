@@ -8,14 +8,11 @@ import Data.Tuple.Nested ((/\))
 import Effect (Effect)
 import Effect.Class (class MonadEffect, liftEffect)
 import Foreign (unsafeToForeign)
-import Jelly.Component (class Component)
+import Jelly.Component (Component)
 import Jelly.Element (a)
-import Jelly.Hydrate (HydrateM, hydrate, mount)
+import Jelly.Hooks (class MonadHooks, useEvent, useStateEq)
 import Jelly.Prop (Prop, on, (:=))
-import Jelly.Render (RenderM, render)
-import Jelly.Signal (Signal, newState, writeChannel)
-import Jelly.Hooks (class MonadHooks, Hooks, newStateEq, useEvent)
-import Web.DOM (Node)
+import Jelly.Signal (Signal, writeChannel)
 import Web.Event.Event (preventDefault)
 import Web.HTML (window)
 import Web.HTML.Event.EventTypes (click)
@@ -25,6 +22,7 @@ import Web.HTML.Location (hash, pathname, search)
 import Web.HTML.Window (history, location)
 import Web.HTML.Window as Window
 
+-- | `Router m` represents you can use routing in Monad `m`.
 class MonadEffect m <= Router m where
   -- | Push a new Route to the browser history.
   usePushRoute :: String -> m Unit
@@ -33,12 +31,14 @@ class MonadEffect m <= Router m where
   -- | Get the current Route.
   useCurrentRoute :: m (Signal String)
 
+-- | RouterR is a global values for RouterT.
 type RouterR =
   { pushState :: String -> Effect Unit
   , replaceState :: String -> Effect Unit
   , currentRoute :: Signal String
   }
 
+-- | RouterT is a Monad for Router.
 newtype RouterT :: forall k. (k -> Type) -> k -> Type
 newtype RouterT m a = RouterT (ReaderT RouterR m a)
 
@@ -50,7 +50,6 @@ derive newtype instance Monad m => Monad (RouterT m)
 derive newtype instance MonadEffect m => MonadEffect (RouterT m)
 derive newtype instance MonadRec m => MonadRec (RouterT m)
 derive newtype instance MonadHooks m => MonadHooks (RouterT m)
-derive newtype instance Component m => Component (RouterT m)
 instance MonadEffect m => Router (RouterT m) where
   usePushRoute route = RouterT $ asks _.pushState >>= \push -> liftEffect $ push route
   useReplaceRoute route = RouterT $ asks _.replaceState >>= \replace -> liftEffect $ replace route
@@ -61,7 +60,24 @@ instance Router m => Router (ReaderT r m) where
   useReplaceRoute = lift <<< useReplaceRoute
   useCurrentRoute = lift useCurrentRoute
 
-initRouter :: Hooks RouterR
+-- | Run a RouterT.
+runRouterT :: forall m a. MonadHooks m => RouterT m a -> m a
+runRouterT (RouterT rdr) = do
+  routerR <- initRouter
+  runReaderT rdr routerR
+
+-- | Run a RouterT outside of the browser.
+-- | This is useful for SSG.　
+runMockRouterT :: forall m a. MonadHooks m => String -> RouterT m a -> m a
+runMockRouterT initRoute (RouterT rdr) = do
+  currentRoute /\ crChn <- useStateEq initRoute
+  runReaderT rdr
+    { pushState: writeChannel crChn
+    , replaceState: writeChannel crChn
+    , currentRoute
+    }
+
+initRouter :: forall m. MonadHooks m => m RouterR
 initRouter = do
   w <- liftEffect window
   initRoute <- liftEffect do
@@ -71,7 +87,7 @@ initRouter = do
     hs <- hash l
     pure $ pn <> sr <> hs
 
-  currentRoute /\ crChn <- newStateEq initRoute
+  currentRoute /\ crChn <- useStateEq initRoute
   let
     handleRoute handleFn route = do
       handleFn (unsafeToForeign {}) (DocumentTitle "")
@@ -93,37 +109,11 @@ initRouter = do
       pure $ pn <> sr <> hs
     writeChannel crChn route
 
-  pure $ routerR
+  pure routerR
 
-mountRouter :: RouterT HydrateM Unit -> Node -> Hooks Unit
-mountRouter (RouterT m) node = do
-  routerR <- initRouter
-  mount (runReaderT m routerR) node
-
-hydrateRouter :: RouterT HydrateM Unit -> Node -> Hooks Unit
-hydrateRouter (RouterT m) node = do
-  routerR <- initRouter
-  hydrate (runReaderT m routerR) node
-
-renderRouter :: RouterT RenderM Unit -> String -> Effect String
-renderRouter (RouterT m) route = do
-  currentRoute /\ crChn <- newState route
-  let
-    routerR =
-      { pushState: writeChannel crChn
-      , replaceState: writeChannel crChn
-      , currentRoute
-      }
-  render $ runReaderT m routerR
-
-routerLink
-  :: forall m
-   . Component m
-  => Router m
-  => String
-  -> Array (Prop m)
-  -> m Unit
-  -> m Unit
+-- | Router link component.
+-- | This is the `a` element, but when clicked, it does preventDefault and does SPA routing.
+routerLink :: forall m. MonadEffect m => Router m => String -> Array (Prop m) -> Component m -> Component m
 routerLink route props component = do
   let
     handleClick e = do
@@ -132,5 +122,6 @@ routerLink route props component = do
 
   a ([ on click handleClick, "href" := route ] <> props) component
 
-routerLink' :: forall m. Component m => Router m => String -> m Unit -> m Unit
+-- | Same as `routerLink`, but without Props.
+routerLink' :: forall m. MonadEffect m => Router m => String -> Component m -> Component m
 routerLink' route component = routerLink route [] component
