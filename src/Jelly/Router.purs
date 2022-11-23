@@ -68,8 +68,8 @@ runRouterT (RouterT rdr) = do
 
 -- | Run a RouterT outside of the browser.
 -- | This is useful for SSG.　
-runMockRouterT :: forall m a. MonadHooks m => String -> RouterT m a -> m a
-runMockRouterT initRoute (RouterT rdr) = do
+runMockRouterT :: forall m a. MonadHooks m => RouterT m a -> String -> m a
+runMockRouterT (RouterT rdr) initRoute = do
   currentRoute /\ crChn <- useStateEq initRoute
   runReaderT rdr
     { pushState: writeChannel crChn
