@@ -124,7 +124,7 @@ in  upstream
       , "web-html"
       ]
     , repo = "https://github.com/yukikurage/purescript-jelly.git"
-    , version = "v0.9.0"
+    , version = "v0.9.1"
     }
   with jelly-signal =
     { dependencies = [ "effect", "prelude", "refs", "tuples", "unsafe-coerce" ]
