@@ -16,7 +16,6 @@ to generate this file without the comments in this block.
   , "foreign"
   , "jelly"
   , "prelude"
-  , "jelly-hooks"
   , "jelly-signal"
   , "tailrec"
   , "transformers"
